@@ -45,7 +45,7 @@ def get_cookies_from_genlogin(profile_id):
 
     options = Options()
     options.add_experimental_option("debuggerAddress", debugger_address)
-    service = Service('crawl/chromedriver.exe')
+    service = Service('C:\\Users\\ADMIN\\shopee-review-analyzer\\crawl\\chromedriver.exe')
     driver = webdriver.Chrome(service=service, options=options)
     inject_anti_bot_scripts(driver)
 
