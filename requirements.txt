@@ -1,0 +1,9 @@
+flask
+openai
+requests
+beautifulsoup4
+matplotlib
+textblob
+sklearn
+pandas
+joblib

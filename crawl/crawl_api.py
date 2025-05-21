@@ -145,7 +145,6 @@ def crawl_all_reviews(shop_id, item_id=None, limit_per_request=50, delay=1):
                 result["message"] = error_message
                 break
 
-        # Cập nhật kết quả
         actual_pages = current_page - 1
         print(f"Hoàn thành! Đã lấy tổng cộng {len(all_reviews)} đánh giá ({actual_pages} trang).")
         
@@ -169,15 +168,11 @@ def crawl_all_reviews(shop_id, item_id=None, limit_per_request=50, delay=1):
         }
 
 def main():
-    """Hàm chính cho chế độ dòng lệnh"""
-    # Thư mục đầu ra
     output_dir = Path(r"C:/download")
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    # Lấy URL sản phẩm từ người dùng
     product_url = input("Nhập URL sản phẩm Shopee: ")
     
-    # Chọn định dạng đầu ra
     format_type = input("Chọn định dạng file (xlsx/txt, mặc định xlsx): ").lower() or "xlsx"
     if format_type not in ["xlsx", "txt"]:
         print(f"Định dạng {format_type} không được hỗ trợ. Dùng mặc định: xlsx")
@@ -188,7 +183,6 @@ def main():
         shop_id, item_id = extract_ids_from_url(product_url)
         print(f"Đã lấy: Shop ID = {shop_id}, Item ID = {item_id}")
 
-        # Đặt tên file dựa trên item_id và timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_file = f"reviews_item_{item_id}_{timestamp}.{format_type}"
         output_path = output_dir / output_file
