@@ -76,5 +76,3 @@ python main.py
 - Không push file `.env`, dữ liệu crawl lên GitHub.
 
 ---
-
-**Mọi thắc mắc hoặc đóng góp vui lòng mở issue hoặc liên hệ trực tiếp qua GitHub.**
