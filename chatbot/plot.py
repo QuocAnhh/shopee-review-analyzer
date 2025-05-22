@@ -1,6 +1,12 @@
-import matplotlib.pyplot as plt
 import os
 import uuid
+from pathlib import Path
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+CHART_DIR = Path("charts")
+CHART_DIR.mkdir(parents=True, exist_ok=True)
 
 def plot_sentiment_chart(sentiments):
     labels = ['Tích cực', 'Trung tính', 'Tiêu cực']
@@ -23,7 +29,7 @@ def plot_sentiment_chart(sentiments):
     plt.title('Tỉ lệ cảm xúc bình luận')
     plt.tight_layout()
     filename = f"sentiment_{uuid.uuid4().hex[:8]}.png"
-    out_path = os.path.join('C:/Users/ADMIN/shopee-review-analyzer/static', filename)
+    out_path = CHART_DIR / filename
     plt.savefig(out_path)
     plt.close()
-    return out_path
+    return str(out_path)
