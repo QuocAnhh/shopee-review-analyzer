@@ -2,7 +2,7 @@ import React, {useState} from "react";
 import {InputGroup, FormControl, Button, Badge, Fade} from 'react-bootstrap';
 import { FaPaperclip, FaPaperPlane } from 'react-icons/fa';
 
-const InputAre = ({ onSendMessage, suggestions = []}) => {
+const InputArea = ({ onSendMessage, suggestions = []}) => {
     const [message, setMessage] = useState('');
     const handleSend = () => {
         if(message.trim()) {
