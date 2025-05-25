@@ -4,6 +4,7 @@ requests
 beautifulsoup4
 matplotlib
 textblob
-sklearn
+scikit-learn
 pandas
 joblib
+transformers

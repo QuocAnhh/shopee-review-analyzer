@@ -45,77 +45,91 @@ const ChatInterface = () => {
   }, [messages, isTyping]);
 
   return (
-    <Container fluid className="d-flex flex-column h-100 p-0">
+    <Container fluid className="d-flex flex-column vh-100 p-0">
       {/* Welcome Message */}
-      <div className="welcome-message text-center py-5">
-        <h1 className="display-4 mb-4 chat-header-container">Shopee Assistant</h1>
+      <div className="welcome-message text-center py-4 d-flex flex-column justify-content-center" style={{ height: '20%' }}>
+        <h1 className="display-4 mb-4">Shopee Assistant</h1>
+        <p className="text-muted">How can I help you today?</p>
       </div>
 
       {/* Chat Container */}
       <div 
         ref={chatContainerRef}
-        className="chat-container flex-grow-1 overflow-auto p-3 bg-light"
+        className="flex-grow-1 overflow-auto p-3 bg-light"
+        style={{ height: '65%' }}
       >
         {/* Messages */}
         {messages.map((msg, index) => (
           <div 
             key={index} 
-            className={`message d-flex flex-column mb-3 ${msg.isUser ? 'align-items-end' : 'align-items-start'}`}
+            className={`d-flex flex-column mb-3 ${msg.isUser ? 'align-items-end' : 'align-items-start'}`}
           >
             <div 
-              className={`message-content p-3 rounded-3 ${msg.isUser ? 'bg-primary text-white' : 'bg-white'}`}
-              style={{ maxWidth: '80%' }}
+              className={`p-3 rounded-3 ${msg.isUser ? 'bg-primary text-white' : 'bg-white shadow-sm'}`}
+              style={{ 
+                maxWidth: '80%',
+                borderRadius: msg.isUser ? '18px 18px 0 18px' : '18px 18px 18px 0'
+              }}
             >
               {msg.content}
             </div>
-            <div className="message-time small text-muted">
+            <small className={`text-muted mt-1 ${msg.isUser ? 'text-end' : 'text-start'}`}>
               {msg.time}
-            </div>
+            </small>
           </div>
         ))}
         
         {/* Typing Indicator */}
         {isTyping && (
-          <div className="typing-indicator d-flex align-items-center p-2 bg-white rounded-3 shadow-sm mb-3">
-            <span className="dot me-1" style={{ animationDelay: '0s' }}></span>
-            <span className="dot me-1" style={{ animationDelay: '0.2s' }}></span>
+          <div className="typing-indicator d-flex align-items-center p-3 bg-white rounded-3 shadow-sm mb-3" style={{ width: 'fit-content' }}>
+            <span className="dot" style={{ animationDelay: '0s' }}></span>
+            <span className="dot mx-1" style={{ animationDelay: '0.2s' }}></span>
             <span className="dot" style={{ animationDelay: '0.4s' }}></span>
           </div>
         )}
       </div>
 
       {/* Input Area */}
-      <div className="input-area-container bg-white border-top p-3">
-        <Form onSubmit={handleSubmit} className="chat-input-form">
-          <InputGroup>
-            <Form.Control
-              as="textarea"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Nhập tin nhắn của bạn..."
-              rows={1}
-              style={{ resize: 'none' }}
-            />
-            <Button 
-              variant="primary" 
-              type="submit"
-              disabled={!message.trim()}
-            >
-              <FontAwesomeIcon icon={faPaperPlane} />
-            </Button>
-          </InputGroup>
-        </Form>
-        <div className="text-center text-muted small mt-2">
-          Shopee Assistant có thể đưa ra thông tin không chính xác. Vui lòng kiểm tra lại thông tin quan trọng.
-        </div>
+    <div className="input-area bg-white border-top p-3" style={{ minHeight: '80px' }}>
+      <Form onSubmit={handleSubmit}>
+        <InputGroup style={{ height: '50px' }}> 
+          <Form.Control
+            as="textarea"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Nhập tin nhắn của bạn..."
+            style={{ 
+              resize: 'none',
+              height: '50px',
+              minHeight: '50px', 
+              lineHeight: '1.2' 
+            }}
+          />
+          <Button 
+            variant="primary" 
+            type="submit"
+            disabled={!message.trim()}
+            style={{
+              height: '50px',
+              width: '40px', 
+              padding: '0' 
+            }}
+          >
+            <FontAwesomeIcon icon={faPaperPlane} size="sm" /> 
+          </Button>
+        </InputGroup>
+      </Form>
+      <div className="text-center text-muted small mt-2">
+        Shopee Assistant có thể đưa ra thông tin không chính xác. Vui lòng kiểm tra lại thông tin quan trọng.
       </div>
+    </div>
 
-      {/* CSS for typing indicator */}
+      {/* CSS Styles */}
       <style>{`
         .dot {
-          height: 10px;
-          width: 10px;
-          background-color: #bbb;
+          height: 8px;
+          width: 8px;
+          background-color: #6c757d;
           border-radius: 50%;
           display: inline-block;
           animation: bounce 1.4s infinite ease-in-out both;
@@ -126,8 +140,21 @@ const ChatInterface = () => {
           40% { transform: scale(1); }
         }
         
-        .chat-container {
-          min-height: 0;
+        @media (max-width: 768px) {
+          .welcome-message {
+            height: 15% !important;
+            padding: 1rem !important;
+          }
+          .welcome-message h1 {
+            font-size: 1.8rem !important;
+            margin-bottom: 0.5rem !important;
+          }
+          .welcome-message p {
+            display: none;
+          }
+          .message-content {
+            max-width: 90% !important;
+          }
         }
       `}</style>
     </Container>

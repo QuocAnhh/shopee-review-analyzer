@@ -63,15 +63,21 @@ const ChatContainer = () => {
             {isTyping && <TypingIndicator/>}
 
             {/* Thêm CSS animatiom cjo typing indicator */}
-            <style>
-                {`
-                    @keyframes typing {
-                        0% { opacity: 0.4; transform: translateY(0); }
-                        50% { opacity: 1; transform: translateY(-3px); }
-                        100% { opacity: 0.4; transform: translateY(0); }
-                    }
-                `}
-            </style>
+            // Thêm media query cho mobile
+        <style>{`
+            @media (max-width: 768px) {
+                .welcome-message {
+                height: 15% !important;
+                padding: 1rem !important;
+                }
+                .welcome-message h1 {
+                font-size: 1.8rem !important;
+                }
+                .chat-message {
+                max-width: 90% !important;
+                }
+            }
+        `}</style>
         </div>
     )
 }
