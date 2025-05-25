@@ -1,72 +1,122 @@
 import os
 import re
 import unicodedata
-from transformers import pipeline
-import joblib
+import openai
+from dotenv import load_dotenv
 
-summarizer = pipeline("text2text-generation", model="pengold/t5-vietnamese-summarization", max_length=128)
+
+load_dotenv()
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    raise RuntimeError("cần đặt biến môi trường OPENAI_API_KEY trước khi chạy.")
+
+openai.api_key = OPENAI_API_KEY
+
+MODEL_NAME = "gpt-3.5-turbo" 
+
 
 def preprocess_text(text):
     text = unicodedata.normalize("NFC", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text
 
+def call_openai(messages):
+    MAX_TOTAL_CHARS = 8000
+    total_chars = sum(len(m["content"]) for m in messages)
+    #nếu dài quá thì cắt bớt
+    if total_chars > MAX_TOTAL_CHARS:
+        for m in messages:
+            if m["role"] == "user" and len(m["content"]) > 2000:
+                m["content"] = m["content"][:2000] + " ..."
+    try:
+        response = openai.ChatCompletion.create(
+            model=MODEL_NAME,
+            messages=messages,
+            temperature=0.3
+        )
+        if response and response.choices:
+            msg = response.choices[0].message
+            if isinstance(msg, dict):
+                content = msg.get("content", None)
+            else:
+                content = getattr(msg, "content", None)
+            if content:
+                return content
+            else:
+                print("DEBUG OpenAI API message object:", msg)
+                return "Lỗi: OpenAI API trả về message không có content."
+        else:
+            print("DEBUG OpenAI API raw response:", response)
+            return "Lỗi: Không nhận được kết quả hợp lệ từ OpenAI API."
+    except Exception as e:
+        print("DEBUG OpenAI API Exception:", e)
+        return f"Lỗi khi gọi OpenAI API: {e}"
+
+def preprocess_reviews(reviews, max_reviews=500, max_chars=6000):
+    # Lọc bỏ comment trùng lặp, rỗng, quá ngắn hoặc chỉ chứa ký tự đặc biệt
+    filtered = []
+    seen = set()
+    for r in reviews:
+        r = preprocess_text(r)
+        if len(r) < 5:
+            continue
+        if r in seen:
+            continue
+        if re.fullmatch(r"[\W_]+", r):
+            continue
+        seen.add(r)
+        filtered.append(r)
+        if len(filtered) >= max_reviews:
+            break
+    # Gộp lại và cắt nếu quá dài
+    text = " ".join(filtered)
+    if len(text) > max_chars:
+        text = text[:max_chars] + " ..."
+    return filtered, text
+
 def summarize_reviews(reviews):
-    # gộp các review thành một đoạn văn
-    text = " ".join([preprocess_text(r) for r in reviews])
-    # tóm tắt
-    result = summarizer(text)
-    if result and 'generated_text' in result[0]:
-        return result[0]['generated_text']
-    elif result and 'summary_text' in result[0]:
-        return result[0]['summary_text']
-    else:
-        return "Không thể tóm tắt các bình luận."
-
-# Sentiment với Naive Bayes
-sentiment_model = joblib.load("models/naive_bayes_sentiment.pkl")
-vectorizer = joblib.load("models/vectorizer.pkl")
-
-def predict_sentiment(text):
-    # Tiền xử lý giống lúc train
-    text = preprocess_text(text)
-    X = vectorizer.transform([text])
-    pred = sentiment_model.predict(X)[0]
-    return pred
+    if not reviews:
+        return "Không có bình luận để tóm tắt."
+    filtered, text = preprocess_reviews(reviews, max_reviews=500, max_chars=6000)
+    prompt = (
+        f"Hãy tóm tắt ngắn gọn, súc tích các bình luận sau về một sản phẩm Shopee bằng tiếng Việt:\n{text}"
+    )
+    messages = [
+        {"role": "user", "content": prompt}
+    ]
+    return call_openai(messages)
 
 def analyze_sentiments(reviews):
-    # Trả về list dict
-    return [{"review": r, "sentiment": predict_sentiment(r)} for r in reviews]
-
-# sinh văn bản tiếng việt
-from transformers import pipeline as gen_pipeline
-
-text_generator = gen_pipeline("text-generation", model="bkai-foundation-models/vietnamese-llama2-7b-40GB", max_new_tokens=150)
+    # Trả về dữ liệu thô vừa crawl, không phân tích cảm xúc, không nhãn
+    filtered, _ = preprocess_reviews(reviews, max_reviews=60, max_chars=2000)
+    return filtered
 
 def generate_product_review(reviews, sentiments):
-    """Sinh ra đoạn đánh giá tổng quan sản phẩm có đáng mua không, vì sao."""
+    if not reviews or not sentiments:
+        return "Không thể tạo nhận xét sản phẩm vào lúc này."
+    filtered, text = preprocess_reviews(reviews, max_reviews=500, max_chars=6000)
     pos = sum(1 for s in sentiments if s['sentiment'] == 'positive')
     neg = sum(1 for s in sentiments if s['sentiment'] == 'negative')
     neu = sum(1 for s in sentiments if s['sentiment'] == 'neutral')
     prompt = (
-        f"Các bình luận về sản phẩm: {' | '.join(reviews)}. "
+        f"Các bình luận về sản phẩm: {text}. "
         f"Có {pos} bình luận tích cực, {neu} trung tính, {neg} tiêu cực. "
-        "Hãy nhận xét tổng quan sản phẩm này có đáng mua không, và giải thích lý do vì sao nên hoặc không nên mua. Trả lời ngắn gọn, súc tích, khách quan."
+        "Hãy nhận xét tổng quan sản phẩm này có đáng mua không, và giải thích lý do vì sao nên hoặc không nên mua. Trả lời ngắn gọn, súc tích, khách quan bằng tiếng Việt."
     )
-    response = text_generator(prompt)
-    if response and "generated_text" in response[0]:
-        return response[0]["generated_text"].strip()
-    else:
-        return "Không thể sinh nhận xét tổng quan."
+    messages = [
+        {"role": "user", "content": prompt}
+    ]
+    return call_openai(messages)
 
 def answer_shopee_question(question):
-    """Trả lời các câu hỏi về Shopee bằng mô hình tiếng Việt."""
+    if not question or not isinstance(question, str):
+        return "Không thể trả lời câu hỏi vào lúc này."
     prompt = (
         "Bạn là trợ lý am hiểu về sàn thương mại điện tử Shopee Việt Nam. "
-        "Hãy trả lời ngắn gọn, chính xác, dễ hiểu cho câu hỏi sau: " + question
+        "Hãy trả lời ngắn gọn, chính xác, dễ hiểu cho câu hỏi sau bằng tiếng Việt: " + question
     )
-    response = text_generator(prompt)
-    if response and "generated_text" in response[0]:
-        return response[0]["generated_text"].strip()
-    else:
-        return "Không thể trả lời câu hỏi"
+    messages = [
+        {"role": "user", "content": prompt}
+    ]
+    return call_openai(messages)

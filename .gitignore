@@ -1,1 +1,16 @@
 .env
+crawled_data/
+charts/
+
+__pycache__/
+*.pyc
+
+.env
+.env.*
+
+.ipynb_checkpoints/
+
+.vscode/
+
+.DS_Store
+Thumbs.db

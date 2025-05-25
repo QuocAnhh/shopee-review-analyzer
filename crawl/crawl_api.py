@@ -5,6 +5,17 @@ import time
 import re
 from datetime import datetime
 import pandas as pd
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
+DATA_DIR = Path("crawled_data")
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+# lấy Shopee API URL từ biến môi trường
+SHOPEE_API_URL = os.getenv("SHOPEE_API_URL")
+SHOPEE_API_KEY = os.getenv("SHOPEE_API_KEY") 
 
 def extract_ids_from_url(url):
     """trích xuất shop_id và item_id từ URL sản phẩm"""
@@ -20,25 +31,24 @@ def extract_ids_from_url(url):
 
 def get_reviews(shop_id, user_id=None, limit=50, offset=0):
     """lấy reviews từ api, trả về dữ liệu JSON"""
-    url = "https://shopee.vn/api/v4/seller_operation/get_shop_ratings_new"
-    
+    url = SHOPEE_API_URL
     params = {
         "limit": limit,
         "offset": offset,
         "shopid": shop_id
     }
-    
     # optional 
     if user_id:
         params["userid"] = user_id
-    
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "User-Agent": os.getenv("SHOPEE_USER_AGENT", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"),
         "Accept": "application/json",
         "Accept-Language": "en-US,en;q=0.9,vi;q=0.8",
         "Referer": "https://shopee.vn/"
     }
-    
+    # optional
+    if SHOPEE_API_KEY:
+        headers["Authorization"] = f"Bearer {SHOPEE_API_KEY}"
     response = requests.get(url, params=params, headers=headers, timeout=10)
     response.raise_for_status()
     return response.json()
@@ -83,15 +93,15 @@ def save_reviews(reviews, output_path, format_type='xlsx'):
         print(f"Lỗi khi lưu file: {str(e)}")
         return False
 
-def crawl_all_reviews(shop_id, item_id=None, limit_per_request=50, delay=1):
+def crawl_all_reviews(shop_id, item_id=None, limit_per_request=20, delay=0.5):
     """
-    Crawl tất cả reviews có thể từ shop, trả về dữ liệu và trạng thái
+    Crawl số lượng reviews vừa phải để tránh bị limit khi dùng API tóm tắt hoặc phân tích cảm xúc.
     
     Args:
         shop_id: ID của shop
         item_id: ID của sản phẩm (để đặt tên file, không ảnh hưởng tới API)
-        limit_per_request: Số lượng reviews mỗi lần gọi API
-        delay: Thời gian chờ giữa các lần gọi API (giây)
+        limit_per_request: Số lượng reviews mỗi lần gọi API (giảm xuống 20)
+        delay: Thời gian chờ giữa các lần gọi API (0.5s để tránh bị block)
         
     Returns:
         dict: Kết quả với keys: success, message, data, total_reviews, total_pages
@@ -168,10 +178,10 @@ def crawl_all_reviews(shop_id, item_id=None, limit_per_request=50, delay=1):
         }
 
 def main():
-    output_dir = Path(r"C:/download")
+    output_dir = DATA_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    product_url = input("Nhập URL sản phẩm Shopee: ")
+    product_url = input("Nhập link sản phẩm Shopee: ")
     
     format_type = input("Chọn định dạng file (xlsx/txt, mặc định xlsx): ").lower() or "xlsx"
     if format_type not in ["xlsx", "txt"]:
@@ -205,7 +215,6 @@ def main():
     except KeyboardInterrupt:
         print("\nNgười dùng đã dừng quá trình crawl.")
 
-# API function example
 def get_product_reviews_api(product_url, format_type="json"):
     """
     Hàm ví dụ để tích hợp vào API
@@ -219,13 +228,14 @@ def get_product_reviews_api(product_url, format_type="json"):
     """
     try:
         shop_id, item_id = extract_ids_from_url(product_url)
-        result = crawl_all_reviews(shop_id, item_id, delay=0.5)
+        # Crawl ít review hơn để tránh limit khi tóm tắt/phân tích cảm xúc
+        result = crawl_all_reviews(shop_id, item_id, limit_per_request=20, delay=0.5)
         
         if format_type == "json":
             return result
         else:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            temp_file = Path(f"temp_reviews_{item_id}_{timestamp}.{format_type}")
+            temp_file = DATA_DIR / f"temp_reviews_{item_id}_{timestamp}.{format_type}"
             
             if save_reviews(result["data"], temp_file, format_type):
                 result["file_path"] = str(temp_file)
