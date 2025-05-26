@@ -3,12 +3,63 @@ import { Container, Form, InputGroup, Button, Card, Stack } from 'react-bootstra
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { useLocation } from 'react-router-dom';
 
 const ChatInterface = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const chatContainerRef = useRef(null);
+  const location = useLocation();
+  const [historyId, setHistoryId] = useState(null);
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      const params = new URLSearchParams(location.search);
+      const historyId = params.get('history');
+      if (historyId) {
+        try {
+          const response = await fetch(`/api/history/${historyId}`, {
+            credentials: 'include'
+          });
+          const data = await response.json();
+          setMessages(data.messages);
+          setHistoryId(historyId);
+        } catch (error) {
+          console.error('Error loading history:', error);
+        }
+      }
+    };
+    
+    loadHistory();
+  }, [location]);
+
+  const saveChatHistory = async (title) => {
+    try {
+      const response = await fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: title || `Chat ${new Date().toLocaleString()}`,
+          messages: messages
+        })
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Error saving history:', error);
+    }
+  };
+
+  // Gọi hàm save khi có tin nhắn mới
+  useEffect(() => {
+    if (messages.length > 0 && !historyId) {
+      const lastUserMessage = [...messages].reverse().find(m => m.isUser);
+      if (lastUserMessage) {
+        saveChatHistory(lastUserMessage.content.substring(0, 50));
+      }
+    }
+  }, [messages, historyId]);
 
   const askShopee = async (query) => {
     setIsTyping(true);

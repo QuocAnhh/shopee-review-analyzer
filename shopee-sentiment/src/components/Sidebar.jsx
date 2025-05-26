@@ -16,6 +16,8 @@ const Sidebar = () => {
     const location = useLocation();
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [isOpen, setIsOpen] = useState(!isMobile);
+    const userData = JSON.parse(localStorage.getItem('user'));
+    const userName = userData?.name;
 
     // Handle window resize
     useEffect(() => {
@@ -43,6 +45,13 @@ const Sidebar = () => {
             setIsOpen(false);
         }
     };
+
+    const handleLogout = () => {
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        };
 
     const menuItems = [
         { path: '/', icon: <FaComment />, label: 'New Chat' },
@@ -118,13 +127,14 @@ const Sidebar = () => {
                         className="me-3"
                     />
                     <div className="flex-grow-1">
-                        <h6 className="mb-0">Người dùng</h6>
+                        <h6 className="mb-0">{userName}</h6>
                         <small className="text-muted">Free Plan</small>
                     </div>
                     <Button 
                         variant="link" 
                         size="sm"
-                        className="text-muted p-0"
+                        className="d-flex align-items-center py-2 px-3 rounded-end"
+                        onClick={handleLogout}
                     >
                         <FaSignOutAlt />
                     </Button>

@@ -15,10 +15,14 @@ shopee-review-analyzer/
 ├── .gitignore
 ├── crawled_data/           # Thư mục lưu file dữ liệu bình luận đã crawl (xlsx/txt)
 ├── charts/                 # Thư mục lưu ảnh biểu đồ cảm xúc
-├── static/                 # Thư mục chứa file tĩnh (index.html, script.js, style.css)
+├── shopee-sentiment        # Thư mục chứa code Front-end và build
 ├── chatbot/                # Xử lý NLP, AI (summarizer.py, plot.py, ...)
 ├── crawl/                  # Code crawl dữ liệu Shopee (crawl_api.py, ...)
-└── ...
+├── config.py               # Kết nối DB
+├── models/                 # Database models
+│   └── user.py
+├── utils/                  # Hàm tiện ích
+    └── security.py
 ```
 
 ## Hướng dẫn cài đặt & chạy

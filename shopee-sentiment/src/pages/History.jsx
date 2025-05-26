@@ -1,63 +1,64 @@
-import React, { useState } from 'react';
-import { Container, InputGroup, Form, Card, Button } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Container, InputGroup, Form, Card, Button, Spinner } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faTrash, faSyncAlt } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faTrash, faSyncAlt, faArrowRight } from '@fortawesome/free-solid-svg-icons';
+import { useNavigate } from 'react-router-dom';
 
 const HistoryPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Sample history data
-  const [historyItems, setHistoryItems] = useState([
-    {
-      id: 1,
-      title: "Hỏi về đơn hàng #12345",
-      preview: "Tôi muốn kiểm tra tình trạng đơn hàng của mình...",
-      time: "2 giờ trước"
-    },
-    {
-      id: 2,
-      title: "Tìm sản phẩm điện thoại",
-      preview: "Bạn có thể giới thiệu điện thoại tầm 5 triệu...",
-      time: "Hôm qua"
-    },
-    {
-      id: 3,
-      title: "Hỏi về chính sách đổi trả",
-      preview: "Tôi muốn biết chính sách đổi trả sản phẩm...",
-      time: "3 ngày trước"
-    },
-    {
-      id: 4,
-      title: "Khuyến mãi tháng 10",
-      preview: "Có chương trình khuyến mãi nào trong tháng 10...",
-      time: "1 tuần trước"
+  const [historyItems, setHistoryItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const response = await fetch('/api/history', {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        setHistoryItems(data);
+      } catch (error) {
+        console.error('Error fetching history:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHistory();
+  }, []);
+
+  const handleReopen = (id) => {
+     navigate(`/?history=${id}`);
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await fetch(`/api/history/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      setHistoryItems(historyItems.filter(item => item.id !== id));
+    } catch (error) {
+      console.error('Error deleting history:', error);
     }
-  ]);
+  };
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
-    // In a real app, you would filter the history items here
   };
 
-  const handleReopen = (id) => {
-    console.log(`Reopening conversation ${id}`);
-    // Implement reopen logic
-  };
-
-  const handleDelete = (id) => {
-    setHistoryItems(historyItems.filter(item => item.id !== id));
-  };
-
-  // Filter history items based on search query
   const filteredItems = historyItems.filter(item =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.preview.toLowerCase().includes(searchQuery.toLowerCase())
+    (item.preview || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <div className="history-page h-100 overflow-auto">
+    <div className="history-page h-100 overflow-auto bg-light">
       <Container className="py-4">
+        <h2 className="mb-4 text-center">Lịch sử trò chuyện</h2>
+
         {/* Search Box */}
         <div className="search-box mb-4">
           <InputGroup>
@@ -72,46 +73,51 @@ const HistoryPage = () => {
             />
           </InputGroup>
         </div>
-        
-        {/* History List */}
-        <div className="history-list">
-          {filteredItems.length > 0 ? (
-            filteredItems.map(item => (
-              <Card key={item.id} className="mb-3 shadow-sm">
-                <Card.Body>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <h5 className="card-title mb-1">{item.title}</h5>
-                    <small className="text-muted">{item.time}</small>
-                  </div>
-                  <p className="card-text text-muted mb-2">{item.preview}</p>
-                  <div className="d-flex">
-                    <Button 
-                      variant="outline-primary" 
-                      size="sm" 
-                      className="me-2"
-                      onClick={() => handleReopen(item.id)}
-                    >
-                      <FontAwesomeIcon icon={faSyncAlt} className="me-1" />
-                      Mở lại
-                    </Button>
-                    <Button 
-                      variant="outline-danger" 
-                      size="sm"
-                      onClick={() => handleDelete(item.id)}
-                    >
-                      <FontAwesomeIcon icon={faTrash} className="me-1" />
-                      Xóa
-                    </Button>
-                  </div>
-                </Card.Body>
-              </Card>
-            ))
-          ) : (
-            <div className="text-center py-5 text-muted">
-              Không tìm thấy kết quả phù hợp
-            </div>
-          )}
-        </div>
+
+        {/* Loading Spinner */}
+        {loading ? (
+          <div className="text-center my-5">
+            <Spinner animation="border" />
+            <p className="mt-2">Đang tải lịch sử...</p>
+          </div>
+        ) : (
+          <>
+            {filteredItems.length === 0 ? (
+              <p className="text-muted text-center">Không tìm thấy cuộc trò chuyện nào.</p>
+            ) : (
+              filteredItems.map((item) => (
+                <Card key={item.id} className="mb-3 shadow-sm">
+                  <Card.Body className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <Card.Title>{item.title}</Card.Title>
+                      <Card.Text className="text-muted small">
+                        {item.preview || 'Không có nội dung xem trước'}
+                      </Card.Text>
+                    </div>
+                    <div className="d-flex gap-2">
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => handleReopen(item.id)}
+                        title="Mở lại"
+                      >
+                        <FontAwesomeIcon icon={faArrowRight} />
+                      </Button>
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        onClick={() => handleDelete(item.id)}
+                        title="Xoá"
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                      </Button>
+                    </div>
+                  </Card.Body>
+                </Card>
+              ))
+            )}
+          </>
+        )}
       </Container>
     </div>
   );

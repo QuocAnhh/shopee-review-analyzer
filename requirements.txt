@@ -8,3 +8,8 @@ scikit-learn
 pandas
 joblib
 transformers
+flask-cors
+pymongo
+python-dotenv
+pyjwt
+bcrypt
