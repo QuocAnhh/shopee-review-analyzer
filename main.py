@@ -26,11 +26,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BUILD_PATH = os.path.normpath(os.path.join(BASE_DIR, '..','shopee-review-analyzer', 'shopee-sentiment', 'build'))
 CHARTS_DIR = os.path.join(BASE_DIR,'shopee-review-analyzer', 'charts')
 
-# Kiểm tra đường dẫn
-print(f"Build path: {BUILD_PATH}")
-print(f"Build exists: {os.path.exists(BUILD_PATH)}")
-print(f"Index.html exists: {os.path.exists(os.path.join(BUILD_PATH, 'index.html'))}")
-
 load_dotenv()
 
 app = Flask(__name__, 
