@@ -19,13 +19,25 @@ from dotenv import load_dotenv
 import os
 import random
 
-# Đường dẫn tuyệt đối tới thư mục build
-BUILD_PATH = os.path.join('D:/NCKH/shopee-review-analyzer/shopee-sentiment/build')
-CHARTS_DIR = os.path.join('D:/NCKH/shopee-review-analyzer/charts')
+# Lấy đường dẫn thư mục hiện tại (nơi app.py đang chạy)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Đường dẫn tương đối tới các thư mục
+BUILD_PATH = os.path.normpath(os.path.join(BASE_DIR, '..','shopee-review-analyzer', 'shopee-sentiment', 'build'))
+CHARTS_DIR = os.path.join(BASE_DIR,'shopee-review-analyzer', 'charts')
+
+# Kiểm tra đường dẫn
+print(f"Build path: {BUILD_PATH}")
+print(f"Build exists: {os.path.exists(BUILD_PATH)}")
+print(f"Index.html exists: {os.path.exists(os.path.join(BUILD_PATH, 'index.html'))}")
 
 load_dotenv()
 
-app = Flask(__name__, static_folder=os.path.join(BUILD_PATH, 'static'))
+app = Flask(__name__, 
+           static_folder=os.path.join(BUILD_PATH, 'static'),
+           static_url_path='/static')
+
+CORS(app)  # Thêm CORS để tránh lỗi cross-origin
 
 # Tạo thư mục charts nếu chưa tồn tại
 os.makedirs(CHARTS_DIR, exist_ok=True)
@@ -323,4 +335,4 @@ def format_time(timestamp):
         return f"{delta.seconds // 60} phút trước"
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
