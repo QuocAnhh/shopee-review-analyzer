@@ -22,14 +22,14 @@ const App = () => {
     <div className="app-container">
       <Routes>
         {/* Public routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        {/* <Route path="/login" element={<Login />} /> */}
+        {/* <Route path="/register" element={<Register />} /> */}
         
         {/* Protected routes */}
         <Route path="/" element={
-          <PrivateRoute>
+          // <PrivateRoute>
             <MainLayout />
-          </PrivateRoute>
+          // </PrivateRoute>
         }>
           <Route index element={<Home />} />
           <Route path="/history" element={<History />} />
