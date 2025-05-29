@@ -3,6 +3,7 @@ openai
 requests
 beautifulsoup4
 matplotlib
+seaborn
 textblob
 scikit-learn
 pandas
