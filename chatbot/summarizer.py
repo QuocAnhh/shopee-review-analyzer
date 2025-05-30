@@ -15,7 +15,7 @@ if not OPENAI_API_KEY:
 
 openai.api_key = OPENAI_API_KEY
 
-MODEL_NAME = "gpt-3.5-turbo" 
+MODEL_NAME = "gpt-4.1-nano" 
 
 
 def preprocess_text(text):
@@ -69,9 +69,10 @@ def preprocess_reviews(reviews, max_reviews=500, max_chars=6000):
             continue
         seen.add(r)
         filtered.append(r)
-        if len(filtered) >= max_reviews:
+        # Chỉ giới hạn nếu max_reviews nhỏ hơn tổng số reviews
+        if max_reviews < len(reviews) and len(filtered) >= max_reviews:
             break
-    # Gộp lại và cắt nếu quá dài
+    # Gộp lại và cắt nếu quá dài  
     text = " ".join(filtered)
     if len(text) > max_chars:
         text = text[:max_chars] + " ..."
@@ -83,14 +84,14 @@ def summarize_reviews(reviews):
     return highlighted_summary
 
 def analyze_sentiments(reviews):
-    # Trả về dữ liệu thô vừa crawl, không phân tích cảm xúc, không nhãn
-    filtered, _ = preprocess_reviews(reviews, max_reviews=60, max_chars=2000)
+    # Trả về dữ liệu thô vừa crawl, không phân tích cảm xúc, không nhãn - sử dụng tất cả dữ liệu
+    filtered, _ = preprocess_reviews(reviews, max_reviews=len(reviews))
     return filtered
 
 def generate_product_review(reviews, sentiments):
     if not reviews or not sentiments:
         return "Không thể tạo nhận xét sản phẩm vào lúc này."
-    filtered, text = preprocess_reviews(reviews, max_reviews=500, max_chars=6000)
+    filtered, text = preprocess_reviews(reviews, max_reviews=len(reviews))
     pos = sum(1 for s in sentiments if s['sentiment'] == 'positive')
     neg = sum(1 for s in sentiments if s['sentiment'] == 'negative')
     neu = sum(1 for s in sentiments if s['sentiment'] == 'neutral')
@@ -264,9 +265,9 @@ def summarize_reviews_with_highlights(reviews):
     """Tóm tắt reviews và highlight từ khóa quan trọng"""
     if not reviews:
         return "Không có bình luận để tóm tắt.", []
-    
-    filtered, text = preprocess_reviews(reviews, max_reviews=500, max_chars=6000)
-    
+
+    filtered, text = preprocess_reviews(reviews, max_reviews=len(reviews))
+
     # Tạo summary
     prompt = (
         f"Hãy tóm tắt ngắn gọn, súc tích các bình luận sau về một sản phẩm Shopee bằng tiếng Việt:\n{text}"
