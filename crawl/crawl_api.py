@@ -93,14 +93,14 @@ def save_reviews(reviews, output_path, format_type='xlsx'):
         print(f"Lỗi khi lưu file: {str(e)}")
         return False
 
-def crawl_all_reviews(shop_id, item_id=None, limit_per_request=20, delay=0.5):
+def crawl_all_reviews(shop_id, item_id=None, limit_per_request=50, delay=0.5):
     """
     Crawl số lượng reviews vừa phải để tránh bị limit khi dùng API tóm tắt hoặc phân tích cảm xúc.
     
     Args:
         shop_id: ID của shop
         item_id: ID của sản phẩm (để đặt tên file, không ảnh hưởng tới API)
-        limit_per_request: Số lượng reviews mỗi lần gọi API (giảm xuống 20)
+        limit_per_request: Số lượng reviews mỗi lần gọi API
         delay: Thời gian chờ giữa các lần gọi API (0.5s để tránh bị block)
         
     Returns:
@@ -229,7 +229,7 @@ def get_product_reviews_api(product_url, format_type="json"):
     try:
         shop_id, item_id = extract_ids_from_url(product_url)
         # Crawl ít review hơn để tránh limit khi tóm tắt/phân tích cảm xúc
-        result = crawl_all_reviews(shop_id, item_id, limit_per_request=20, delay=0.5)
+        result = crawl_all_reviews(shop_id, item_id, limit_per_request=50, delay=0.5)
         
         if format_type == "json":
             return result
