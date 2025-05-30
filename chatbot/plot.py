@@ -1,4 +1,3 @@
-import os
 import uuid
 from pathlib import Path
 import matplotlib
@@ -21,16 +20,16 @@ def plot_sentiment_chart(sentiments):
     fig, ax = plt.subplots(figsize=(6, 5))
     fig.suptitle('Phân tích cảm xúc bình luận sản phẩm Shopee', fontsize=14, fontweight='bold')
     
-    # Pie chart with modern styling
-    colors = ['#2ecc71', '#95a5a6', '#e74c3c']  # Modern green, gray, red
+    # Pie chart 
+    colors = ['#2ecc71', '#95a5a6', '#e74c3c'] 
     wedges, texts, autotexts = ax.pie(
         counts,
         labels=labels,
         colors=colors,
         autopct=lambda pct: f"{int(round(pct/100.*sum(counts)))}\n({pct:.1f}%)" if pct > 0 else '',
         startangle=90,
-        explode=(0.05, 0, 0.05),  # Explode positive and negative
-        shadow=True,        textprops={'fontsize': 10, 'fontweight': 'bold'}
+        explode=(0.05, 0, 0.05),  # explode positive and negative
+        shadow=True, textprops={'fontsize': 10, 'fontweight': 'bold'}
     )
     ax.set_title('Phân bố cảm xúc', fontweight='bold', pad=15, fontsize=12)
     
