@@ -20,27 +20,36 @@ shopee-review-analyzer/
 ├── crawl/                  # Code crawl dữ liệu Shopee (crawl_api.py, ...)
 ├── config.py               # Kết nối DB
 ├── models/                 # Database models
-│   └── user.py
 ├── utils/                  # Hàm tiện ích
-    └── security.py
+├── routes/                 # Chứa routes backend
+
 ```
 
 ## Hướng dẫn cài đặt & chạy
 
 ### 1. Yêu cầu hệ thống
 - Python >= 3.11
+- React: 19.1.0
+- npm: >= 20.x.x
 - pip (Python package manager)
 
 ### 2. Cài đặt thư viện
 ```bash
 pip install -r requirements.txt
+cd shopee-sentiment
+npm install
+npm run build
 ```
 
-### 3. Thiết lập API Key (OpenAI, Shopee)
+### 3. Thiết lập API Key (OpenAI, Shopee, MongoDB)
 - Tạo file `.env`:
   ```env
   OPENAI_API_KEY=sk-xxxxxxx
   SHOPEE_API_URL=https://shopee.vn/xxx/vx/xxx/xxx
+  MONGO_URI = mongodb+srv://xxxxx:xxxxxxxxxx@cluster0.qlbix.mongodb.net/xxxxx
+  SECRET_KEY = xxxxx
+  JWT_ALGORITHM = xxxxx
+  ACCESS_TOKEN_EXPIRE_MINUTES = xx
  
   ```
 - **Không commit file `.env` lên GitHub!**

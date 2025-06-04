@@ -74,7 +74,7 @@ const Register = () => {
     }
 
     localStorage.setItem('accessToken', data.access_token);
-    navigate('/');
+    navigate('/login');
   } catch (err) {
     setError(err.message);
   }
