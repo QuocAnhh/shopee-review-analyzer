@@ -30,7 +30,7 @@ shopee-review-analyzer/
 ### 1. Yêu cầu hệ thống
 - Python >= 3.11
 - React: 19.1.0
-- npm: >= 20.x.x
+- npm: >= 10.8.2
 - pip (Python package manager)
 
 ### 2. Cài đặt thư viện
