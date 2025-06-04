@@ -15,6 +15,7 @@ const ChatInterface = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [currentChatId, setCurrentChatId] = useState(null);
+  const [trialStatus, setTrialStatus] = useState(null);
 
   useEffect(() => {
     const style = document.createElement('style');
@@ -51,10 +52,28 @@ const ChatInterface = () => {
     `;
     document.head.appendChild(style);
     
+    // Lấy thông tin user và kiểm tra trial
+    const user = JSON.parse(localStorage.getItem('user'));
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+
+    if (!isAuthenticated && user?.isTrial === true && user?.trialEndDate) {
+      const trialEndDate = new Date(user.trialEndDate);
+      const timeLeft = trialEndDate.getTime() - new Date().getTime();
+      const daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
+
+      if (daysLeft > 0) {
+        setTrialStatus(`Bạn đang sử dụng bản dùng thử. Còn ${daysLeft} ngày.`);
+      } else {
+        setTrialStatus('Bản dùng thử của bạn đã hết hạn.');
+      }
+    } else if (isAuthenticated) {
+      setTrialStatus(null); // Ẩn thông báo trial nếu đã đăng nhập
+    }
+    
     return () => {
       document.head.removeChild(style);
     };
-  }, []);
+  }, [navigate, location]);
 
   useEffect(() => {
     const loadHistory = async () => {
@@ -368,38 +387,26 @@ const ChatInterface = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!message.trim()) return;
-    
-    const userMessage = {
+
+    const newMessage = {
       content: message,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isUser: true
+      isUser: true,
+      time: new Date().toLocaleTimeString()
     };
-    
-    setMessages(prev => [...prev, userMessage]);
+
+    setMessages(prev => [...prev, newMessage]);
     setMessage('');
-    
-    if (!currentChatId) {
-      try {
-        const response = await fetch('/api/chats/new', {
-          method: 'POST',
-          headers: authHeaders(),
-          body: JSON.stringify({ initial_message: message })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Failed to create chat');
-        setCurrentChatId(data.chat_id);
-      } catch (error) {
-        console.error('Error creating chat:', error);
-        setErrorMessage('Không thể tạo cuộc trò chuyện mới.');
-        return;
-      }
+
+    const response = await askShopee(message);
+    setMessages(prev => [...prev, { ...response, time: new Date().toLocaleTimeString() }]);
+    setIsTyping(false);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
     }
-    
-    const botResponse = await askShopee(message);
-    setMessages(prev => [...prev, {
-      ...botResponse,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }]);
   };
 
   useEffect(() => {
@@ -447,6 +454,11 @@ const ChatInterface = () => {
 
   return (
     <Container fluid className="d-flex flex-column vh-100 p-0">
+      {trialStatus && (
+        <Alert variant={trialStatus.includes('hết hạn') ? 'danger' : 'info'} className="mt-3 mx-3">
+          {trialStatus}
+        </Alert>
+      )}
       {errorMessage && (
         <Alert variant="danger" onClose={() => setErrorMessage(null)} dismissible>
           {errorMessage}
@@ -474,30 +486,17 @@ const ChatInterface = () => {
       </div>
 
       <div className="input-area bg-white border-top p-3" style={{ minHeight: '80px' }}>
-        <Form onSubmit={handleSubmit}>
-          <InputGroup style={{ height: '50px' }}>
+        <Form onSubmit={handleSubmit} className="chat-input-form">
+          <InputGroup>
             <Form.Control
-              as="textarea"
+              type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Nhập link sản phẩm Shopee hoặc câu hỏi về Shopee..."
-              style={{ 
-                resize: 'none',
-                height: '50px',
-                minHeight: '50px', 
-                lineHeight: '1.2' 
-              }}
+              onKeyPress={handleKeyPress}
+              placeholder="Nhập tin nhắn của bạn..."
+              className="chat-input"
             />
-            <Button 
-              variant="primary" 
-              type="submit"
-              disabled={!message.trim()}
-              style={{
-                height: '50px',
-                width: '50px', 
-                padding: '0' 
-              }}
-            >
+            <Button type="submit" variant="primary" className="send-button">
               <FontAwesomeIcon icon={faPaperPlane} />
             </Button>
           </InputGroup>

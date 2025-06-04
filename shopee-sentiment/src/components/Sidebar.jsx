@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Nav, Image, Button } from 'react-bootstrap';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -11,11 +11,12 @@ import {
     FaBars,
 } from 'react-icons/fa';
 
-const Sidebar = () => {
+const Sidebar = ({ onToggle }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [isOpen, setIsOpen] = useState(!isMobile);
+    const sidebarRef = useRef(null);
     const userData = JSON.parse(localStorage.getItem('user'));
     const userName = userData?.name;
 
@@ -25,19 +26,36 @@ const Sidebar = () => {
             const mobile = window.innerWidth < 768;
             setIsMobile(mobile);
             setIsOpen(!mobile);
+            onToggle && onToggle(!mobile);
         };
 
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    }, [onToggle]);
+
+    // Handle click outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (isMobile && isOpen && sidebarRef.current && !sidebarRef.current.contains(event.target)) {
+                setIsOpen(false);
+                onToggle && onToggle(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isMobile, isOpen, onToggle]);
 
     // Handle mobile toggle
     useEffect(() => {
         const toggleBtn = document.getElementById('toggleSidebar');
         if (toggleBtn) {
-            toggleBtn.addEventListener('click', () => setIsOpen(!isOpen));
+            toggleBtn.addEventListener('click', () => {
+                setIsOpen(!isOpen);
+                onToggle && onToggle(!isOpen);
+            });
         }
-    }, [isOpen]);
+    }, [isOpen, onToggle]);
 
     const handleNavigation = (path) => {
         navigate(path);
@@ -63,6 +81,7 @@ const Sidebar = () => {
 
     return (
         <div
+            ref={sidebarRef}
             className={`sidebar bg-white border-end shadow-sm position-fixed h-100 d-flex flex-column ${
                 isMobile ? (isOpen ? 'show' : 'hide') : ''
             }`}

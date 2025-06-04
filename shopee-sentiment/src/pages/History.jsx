@@ -7,6 +7,7 @@ import {
   Button,
   Spinner,
   Alert,
+  Modal
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -20,8 +21,10 @@ const HistoryPage = () => {
   const [historyItems, setHistoryItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
-  const [errorMessage, setErrorMessage] = useState(null); // New state for error messages
+  const [errorMessage, setErrorMessage] = useState(null);
   const navigate = useNavigate();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [chatToDeleteId, setChatToDeleteId] = useState(null);
 
   useEffect(() => {
     const loadHistory = async () => {
@@ -72,13 +75,25 @@ const HistoryPage = () => {
     }
   };
   
-  const handleDelete = async (id) => {
-    if (!window.confirm('Bạn chắc chắn muốn xóa?')) return;
+  const handleDeleteClick = (id) => {
+    setChatToDeleteId(id);
+    setShowDeleteModal(true);
+  };
 
-    setDeletingId(id);
+  const handleCloseModal = () => {
+    setShowDeleteModal(false);
+    setChatToDeleteId(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!chatToDeleteId) return;
+
+    setDeletingId(chatToDeleteId);
+    setShowDeleteModal(false);
     try {
-      await deleteChat(id);
-      setHistoryItems((prev) => prev.filter((item) => item.id !== id));
+      await deleteChat(chatToDeleteId);
+      setHistoryItems((prev) => prev.filter((item) => item.id !== chatToDeleteId));
+      setChatToDeleteId(null);
     } catch (error) {
       console.error('Lỗi khi xóa:', error);
       setErrorMessage('Xóa cuộc trò chuyện thất bại. Vui lòng thử lại.');
@@ -159,7 +174,7 @@ const HistoryPage = () => {
                 <Button
                   variant="outline-danger"
                   size="sm"
-                  onClick={() => handleDelete(item.id)}
+                  onClick={() => handleDeleteClick(item.id)}
                   title="Xóa"
                   disabled={deletingId === item.id}
                 >
@@ -174,6 +189,24 @@ const HistoryPage = () => {
           </Card>
         ))
       )}
+
+      {/* Bootstrap Delete Confirmation Modal */}
+      <Modal show={showDeleteModal} onHide={handleCloseModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Xác nhận xóa</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Bạn chắc chắn muốn xóa cuộc trò chuyện này? Hành động này không thể hoàn tác.
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseModal}>
+            Hủy
+          </Button>
+          <Button variant="danger" onClick={confirmDelete}>
+            Xóa
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 };
