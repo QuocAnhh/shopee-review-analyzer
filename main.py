@@ -25,6 +25,9 @@ from utils.security import (
 from dotenv import load_dotenv
 import os
 import random
+from routes.auth_routes import initialize_auth_routes
+from routes.history_routes import initialize_history_routes
+from marshmallow import Schema, fields, validate, ValidationError
 
 # Lấy đường dẫn thư mục hiện tại (nơi app.py đang chạy)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -32,6 +35,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Đường dẫn tương đối tới các thư mục
 BUILD_PATH = os.path.join(BASE_DIR, 'shopee-sentiment', 'build')
 CHARTS_DIR = os.path.join(BASE_DIR, 'charts')
+
+# Khởi tạo kết nối MongoDB
+client = MongoClient(Config.MONGO_URI)
+db = client.get_database()
 
 load_dotenv()
 
@@ -41,6 +48,10 @@ app = Flask(__name__,
 
 # Thêm secret key cho session
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here-change-in-production')
+
+# Routes
+initialize_auth_routes(app, db)
+initialize_history_routes(app, db)
 
 CORS(app)  # Thêm CORS để tránh lỗi cross-origin
 

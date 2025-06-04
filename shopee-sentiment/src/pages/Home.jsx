@@ -1,19 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Container, Form, InputGroup, Button, Card, Stack } from 'react-bootstrap';
+import { Container, Form, InputGroup, Button, Card, Stack, Alert } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { authHeaders } from '../api/history';
 
 const ChatInterface = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
   const chatContainerRef = useRef(null);
   const location = useLocation();
-  const [historyId, setHistoryId] = useState(null);
+  const navigate = useNavigate();
+  const [currentChatId, setCurrentChatId] = useState(null);
 
-  // Inject CSS styles for keyword highlighting
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
@@ -58,49 +60,93 @@ const ChatInterface = () => {
     const loadHistory = async () => {
       const params = new URLSearchParams(location.search);
       const historyId = params.get('history');
+      
       if (historyId) {
         try {
-          const response = await fetch(`/api/history/${historyId}`, {
-            credentials: 'include'
+          const token = localStorage.getItem('accessToken');
+          if (!token) {
+            setErrorMessage('Vui lòng đăng nhập để xem lịch sử trò chuyện.');
+            navigate('/login');
+            return;
+          }
+
+          const response = await fetch(`/api/chats/${historyId}`, {
+            headers: authHeaders()
           });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            if (response.status === 401) {
+              setErrorMessage('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+              localStorage.removeItem('accessToken');
+              navigate('/login');
+              return;
+            }
+            if (response.status === 404) {
+              setErrorMessage('Không tìm thấy cuộc trò chuyện.');
+              return;
+            }
+            throw new Error(errorData.error || 'Không thể tải lịch sử trò chuyện.');
+          }
+          
           const data = await response.json();
           setMessages(data.messages);
-          setHistoryId(historyId);
+          setCurrentChatId(historyId);
         } catch (error) {
-          console.error('Error loading history:', error);
+          console.error('Lỗi khi tải lịch sử:', error);
+          setErrorMessage(error.message || 'Không thể tải lịch sử trò chuyện. Vui lòng thử lại.');
         }
       }
     };
     
     loadHistory();
-  }, [location]);
+  }, [location, navigate]);
 
-  const saveChatHistory = async (title) => {
-    try {
-      const response = await fetch('/api/history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          title: title || `Chat ${new Date().toLocaleString()}`,
-          messages: messages
-        })
-      });
-      return await response.json();
-    } catch (error) {
-      console.error('Error saving history:', error);
+  // Lưu hoặc cập nhật chat history
+  const saveChatHistory = async (title, retries = 3) => {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const endpoint = currentChatId ? '/api/chats/active' : '/api/chats/new';
+        const method = currentChatId ? 'PUT' : 'POST';
+        
+        const response = await fetch(endpoint, {
+          method,
+          headers: authHeaders(),
+          body: JSON.stringify({ 
+            messages, 
+            title: title || `Chat ${new Date().toLocaleString()}`
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to save chat');
+        }
+        
+        if (!currentChatId && data.chat_id) {
+          setCurrentChatId(data.chat_id);
+        }
+        
+        return data;
+      } catch (error) {
+        console.error(`Attempt ${attempt} failed:`, error);
+        if (attempt === retries) {
+          setErrorMessage('Không thể lưu lịch sử trò chuyện sau nhiều lần thử.');
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi 1 giây trước khi thử lại
+      }
     }
   };
 
-  // Gọi hàm save khi có tin nhắn mới
+  // Lưu lịch sử khi messages thay đổi
   useEffect(() => {
-    if (messages.length > 0 && !historyId) {
-      const lastUserMessage = [...messages].reverse().find(m => m.isUser);
-      if (lastUserMessage) {
-        saveChatHistory(lastUserMessage.content.substring(0, 50));
-      }
+    if (messages.length > 0) {
+      const firstUserMessage = messages.find(m => m.isUser);
+      saveChatHistory(firstUserMessage?.content.substring(0, 50) || 'New Chat');
     }
-  }, [messages, historyId]);
+  }, [messages]);
 
   const askShopee = async (query) => {
     setIsTyping(true);
@@ -124,17 +170,14 @@ const ChatInterface = () => {
 
       // Phân tích sản phẩm với 3 module chính
       if (data.summary && (data.demo_reviews || data.file_path)) {
-        // Hiển thị hình ảnh sản phẩm
         if (data.product_image) {
           botResponse += `<div style="text-align: center; margin-bottom: 15px;"><img src="${data.product_image}" style="max-width: 300px; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" alt="Product Image"></div>`;
         }
         
-        // Hiển thị tên sản phẩm
         if (data.product_name) {
           botResponse += `<h5 style="color: #e74c3c; margin-bottom: 15px; text-align: center;">🛍️ ${data.product_name}</h5>`;
         }
         
-        // MODULE 1: Thông tin dữ liệu đã crawl
         if (data.crawled_data_info) {
           const info = data.crawled_data_info;
           botResponse += `
@@ -147,7 +190,6 @@ const ChatInterface = () => {
             </div>
           `;
           
-          // Hiển thị mẫu dữ liệu
           if (info.sample_reviews && info.sample_reviews.length > 0) {
             botResponse += `
               <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
@@ -163,7 +205,6 @@ const ChatInterface = () => {
         
         botResponse += `<b>📝 Tóm tắt:</b> <br>${data.summary}<br><br>`;
         
-        // Hiển thị từ khóa quan trọng
         if (data.keywords && data.keywords.length > 0) {
           botResponse += '<b>🔍 Từ khóa quan trọng:</b> ';
           data.keywords.slice(0, 10).forEach((keyword, index) => {
@@ -171,14 +212,14 @@ const ChatInterface = () => {
           });
           botResponse += '<br><br>';
         }
-          if (data.file_path) {
+        
+        if (data.file_path) {
           botResponse += `<b>📁 File dữ liệu crawl:</b> <a href='${data.file_path}' download target='_blank' style="color: #3498db;">Tải file dữ liệu vừa crawl</a><br><br>`;
         }
         
         console.log('DEBUG: data.demo_reviews_with_highlights =', data.demo_reviews_with_highlights);
         console.log('DEBUG: data.overall_assessment =', data.overall_assessment);
         
-        // MODULE 2: Demo reviews với keyword highlighting
         if (data.demo_reviews_with_highlights) {
           const demoData = data.demo_reviews_with_highlights;
           
@@ -207,7 +248,6 @@ const ChatInterface = () => {
           
           botResponse += '</div>';
           
-          // Demo positive reviews với highlights
           if (demoData.positive_reviews && demoData.positive_reviews.length > 0) {
             botResponse += `
               <div style="background: #d5f4e6; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
@@ -220,7 +260,6 @@ const ChatInterface = () => {
             botResponse += '</ul></div>';
           }
           
-          // Demo negative reviews với highlights  
           if (demoData.negative_reviews && demoData.negative_reviews.length > 0) {
             botResponse += `
               <div style="background: #fadbd8; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
@@ -234,20 +273,17 @@ const ChatInterface = () => {
           }
         }
         
-        // Hiển thị biểu đồ
         if (data.chart_url) {
           botResponse += `<br><div class="chart-container"><img src='${data.chart_url}' style='max-width:100%; border-radius:8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);'></div>`;
         }
         
-        // MODULE 3: Đánh giá tổng thể cuối cùng
         if (data.overall_assessment) {
           const assessment = data.overall_assessment;
           
-          // Xác định màu sắc dựa trên điểm số
-          let scoreColor = '#e74c3c'; // Đỏ
-          if (assessment.overall_score >= 8) scoreColor = '#27ae60'; // Xanh lá
-          else if (assessment.overall_score >= 6) scoreColor = '#f39c12'; // Cam
-          else if (assessment.overall_score >= 4) scoreColor = '#f1c40f'; // Vàng
+          let scoreColor = '#e74c3c';
+          if (assessment.overall_score >= 8) scoreColor = '#27ae60';
+          else if (assessment.overall_score >= 6) scoreColor = '#f39c12';
+          else if (assessment.overall_score >= 4) scoreColor = '#f1c40f';
           
           botResponse += `
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin: 20px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
@@ -297,19 +333,16 @@ const ChatInterface = () => {
           `;
         }
         
-        // Hiển thị câu hỏi gợi ý
         if (data.suggested_questions && data.suggested_questions.length > 0) {
           botResponse += '<br><b>💡 Câu hỏi gợi ý:</b><br>';
           data.suggested_questions.forEach((question, index) => {
-            botResponse += `<button style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 8px 12px; margin: 4px; border-radius: 20px; cursor: pointer; font-size: 14px;" onclick="document.querySelector('input[type=text]').value='${question}'; document.querySelector('form').requestSubmit();">${question}</button> `;
+            botResponse += `<button style="background: #f8f9fa; border: 1px solid #dee2e6; padding: nhà 8px 12px; margin: 4px; border-radius: 20px; cursor: pointer; font-size: 14px;" onclick="document.querySelector('input[type=text]').value='${question}'; document.querySelector('form').requestSubmit();">${question}</button> `;
           });
         }
       }
-      // Trả lời câu hỏi Shopee với gợi ý
       else if (data.answer) {
         botResponse = `<b>💬 Trả lời:</b><br>${data.answer}`;
         
-        // Hiển thị câu hỏi gợi ý
         if (data.suggested_questions && data.suggested_questions.length > 0) {
           botResponse += '<br><br><b>💡 Câu hỏi gợi ý:</b><br>';
           data.suggested_questions.forEach((question, index) => {
@@ -336,7 +369,6 @@ const ChatInterface = () => {
     e.preventDefault();
     if (!message.trim()) return;
     
-    // Thêm tin nhắn người dùng
     const userMessage = {
       content: message,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -346,7 +378,23 @@ const ChatInterface = () => {
     setMessages(prev => [...prev, userMessage]);
     setMessage('');
     
-    // Gửi yêu cầu và nhận phản hồi
+    if (!currentChatId) {
+      try {
+        const response = await fetch('/api/chats/new', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ initial_message: message })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to create chat');
+        setCurrentChatId(data.chat_id);
+      } catch (error) {
+        console.error('Error creating chat:', error);
+        setErrorMessage('Không thể tạo cuộc trò chuyện mới.');
+        return;
+      }
+    }
+    
     const botResponse = await askShopee(message);
     setMessages(prev => [...prev, {
       ...botResponse,
@@ -355,7 +403,6 @@ const ChatInterface = () => {
   };
 
   useEffect(() => {
-    // Tự động cuộn xuống dưới cùng
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
@@ -400,18 +447,21 @@ const ChatInterface = () => {
 
   return (
     <Container fluid className="d-flex flex-column vh-100 p-0">
-      {/* Tiêu đề */}
+      {errorMessage && (
+        <Alert variant="danger" onClose={() => setErrorMessage(null)} dismissible>
+          {errorMessage}
+        </Alert>
+      )}
+
       <div className="welcome-message text-center py-4 d-flex flex-column justify-content-center" style={{ height: '15%' }}>
         <h1 className="display-6 mb-2">Phân tích & Hỏi đáp Shopee</h1>
       </div>
 
-      {/* Khu vực chat */}
       <div 
         ref={chatContainerRef}
         className="flex-grow-1 overflow-auto p-3 bg-light"
         style={{ height: '70%' }}
       >
-        {/* Hiển thị tin nhắn */}
         {messages.map((msg, index) => (
           <Message
             key={index}
@@ -420,15 +470,12 @@ const ChatInterface = () => {
             isUser={msg.isUser}
           />
         ))}
-
-        {/* Hiệu ứng đang nhập */}
         {isTyping && <TypingIndicator />}
       </div>
 
-      {/* Ô nhập tin nhắn */}
       <div className="input-area bg-white border-top p-3" style={{ minHeight: '80px' }}>
         <Form onSubmit={handleSubmit}>
-          <InputGroup style={{ height: '50px' }}> 
+          <InputGroup style={{ height: '50px' }}>
             <Form.Control
               as="textarea"
               value={message}
@@ -455,7 +502,8 @@ const ChatInterface = () => {
             </Button>
           </InputGroup>
         </Form>
-      </div>      {/* CSS tùy chỉnh */}
+      </div>
+
       <style>{`
         .dot {
           animation: typing 1.4s infinite ease-in-out;
@@ -467,7 +515,6 @@ const ChatInterface = () => {
           100% { transform: translateY(0); opacity: 0.4; }
         }
         
-        /* Keyword highlighting styles */
         .keyword-highlight {
           background-color: #fff3cd;
           border: 1px solid #ffeaa7;
