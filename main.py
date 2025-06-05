@@ -92,14 +92,13 @@ def analyze():
     
     # Tóm tắt với highlights
     summary = summarize_reviews(reviews)
-    
-    # Phân tích từ khóa
+      # Phân tích từ khóa
     highlighted_reviews, keywords = analyze_review_keywords(reviews)
     product_features = extract_product_features(reviews)
     
-    # Phân tích cảm xúc
+    # Phân tích cảm xúc - sử dụng tất cả dữ liệu cho biểu đồ/thống kê
     all_sentiments = []
-    filtered, _ = preprocess_reviews(reviews, max_reviews=60, max_chars=2000)
+    filtered, _ = preprocess_reviews(reviews, max_reviews=len(reviews), max_chars=10000)
     for r in filtered:
         prompt = f"Phân tích cảm xúc của bình luận sau về sản phẩm Shopee và trả lời duy nhất 1 từ là 'positive', 'neutral' hoặc 'negative':\n{r}"
         messages = [{"role": "user", "content": prompt}]
@@ -194,8 +193,7 @@ def ask():
         
         # Hiển thị thông tin dữ liệu đã crawl (Section 1)
         crawled_data_info = get_crawled_data_info(reviews)
-        
-        # Tóm tắt với highlights
+          # Tóm tắt với highlights
         summary = summarize_reviews(reviews)
         
         # Phân tích từ khóa
@@ -203,7 +201,7 @@ def ask():
         product_features = extract_product_features(reviews)
         # Phân tích cảm xúc
         all_sentiments = []
-        filtered, _ = preprocess_reviews(reviews, max_reviews=60, max_chars=2000)
+        filtered, _ = preprocess_reviews(reviews, max_reviews=len(reviews), max_chars=20000)
         for r in filtered:
             prompt = f"Phân tích cảm xúc của bình luận sau về sản phẩm Shopee và trả lời duy nhất 1 từ là 'positive', 'neutral' hoặc 'negative':\n{r}"
             messages = [{"role": "user", "content": prompt}]
