@@ -14,3 +14,4 @@ pymongo
 python-dotenv
 pyjwt
 bcrypt
+marshmallow
